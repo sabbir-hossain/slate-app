@@ -12,37 +12,39 @@ import initialValue from "../value.json";
 
 import Toolbar from "./toolbar";
 
-const DEFAULT_NODE = 'paragraph'
+const DEFAULT_NODE = 'paragraph';
 
-/*
-const initialValue = Value.fromJSON({
-  document: {
-    nodes: [
-      {
-        object: 'block',
-        type: 'paragraph',
-        nodes: [
-          {
-            object: 'text',
-            leaves: [
-              {
-                text: '',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        object: "block",
-        type: "image",
-        data: {
-          src: ""
+const tabObj = {
+  'true': [ 'paragraph', 'disc-list', 'circle-list', 'square-list' ],
+  'false': [ 'paragraph', 'decimal-list', 'lower-latin-list', 'lower-roman-list' ]
+};
+
+const maxBlockData = 0;
+const numberOflist = 4;
+// let tabNumber = 0 ;
+const plugins = [ 
+  {
+    onKeyDown: (event, editor, next) => {
+      let block = parseInt( document.getElementById('maxBlock').value , 10);
+
+      block = Number.isNaN( block ) ? 0 : block;
+      
+      let nodes = editor['value']['document']['nodes']['_tail']['array'].reduce( (total, current) => {
+        if( current['text'].trim() !== "" ) {
+          total ++;
         }
-      },
-    ],
-  },
-})
-*/
+        return total;
+      }, 0 );
+   
+      if( block != 0 &&  nodes > block ) {
+        event.preventDefault();
+        next();
+      } else {
+        next();
+      }
+    }
+  }
+ ];
 
 function insertImage(change, src, target) {
   if (target) {
@@ -87,7 +89,9 @@ class SlateComponent extends Component {
 
   state = {
     value:  Value.fromJSON(  val  ),
-    tabValue: "bulleted-list"
+    tabValue: "bulleted-list",
+    tabNumber: 0,
+    selectUL: true
   }
 
   ref = editor => {
@@ -95,7 +99,6 @@ class SlateComponent extends Component {
   }
 
   onChange = ( { value } ) => {
-
    if (value.document !== this.state.value.document) {
     const content = JSON.stringify(value.toJSON())
     localStorage.setItem('content', content)
@@ -152,12 +155,15 @@ class SlateComponent extends Component {
             Cancel
           </button>
 
+          <input type="number" id="maxBlock" placeholder="max block"  /> 
+
         </Toolbar>
 
         <Editor 
           placeholder="Enter some text..."
           ref={this.ref}
           value={this.state.value} 
+          plugins={plugins}
           schema={schema}
           onChange={this.onChange}  
           onKeyDown={this.onKeyDown}
@@ -195,14 +201,43 @@ class SlateComponent extends Component {
     const { node, attributes, children, isFocused } = props;
 
     switch ( node.type) {
-      case 'list-item':
-       return <li {...attributes}>{children}</li>
-      case 'numbered-list':
+
+      case 'bulleted-list': {
+        return <ul {...attributes}>{children}</ul>
+      }
+
+      case 'list-item': {
+        return <li {...attributes}>{children}</li>
+      }
+
+      case 'circle-list': {
+        return <ul className="circle" {...attributes}>{children}</ul>
+      }
+      case 'disc-list': {
+        return <ul className="disc" {...attributes}>{children}</ul>
+      }
+      case 'square-list': {
+        return <ul className="square" {...attributes}>{children}</ul>
+      }
+
+      case 'numbered-list': {
         return <ol {...attributes}>{children}</ol>
+      }
+
+      case 'decimal-list': {
+        return <ol className="decimal" {...attributes}>{children}</ol>
+      }
+      case 'lower-latin-list': {
+        return <ol className="lower-latin" {...attributes}>{children}</ol>
+      }
+      case 'lower-roman-list': {
+        return <ol className="lower-roman"  {...attributes}>{children}</ol>
+      }
+
       case 'image': {
         const src = node.data.get('src')
         return <img src={src} selected={isFocused} {...attributes} />
-        }
+      }
       default:
         return next()
     }
@@ -230,8 +265,9 @@ class SlateComponent extends Component {
     //   const parent = value.document.getParent(value.blocks.first().key)
     //   // isActive = this.hasBlock('list-item') && parent && parent.type === type
     // }
+    // this.state.selectUL = !this.state.selectUL;
 
-    return (
+     return (
       <span className="separator"
         onMouseDown={event => this.onClickBlock(event, type)}
       >
@@ -242,28 +278,64 @@ class SlateComponent extends Component {
 
   // Define a new handler which prints the key that was pressed.
   onKeyDown = (event, change, next) => {
-    let type = "";
-    if( event.key === 'Tab' ) {
-      type = this.state.tabValue === "bulleted-list" ? "numbered-list" : "bulleted-list";
-      this.setState( { tabValue: type } )
-      change.setBlocks('list-item').wrapBlock(type)
-    }
+    const { value } = change
 
-    if( event.shiftKey && event.key === 'Tab' ) {
-      let type = this.state.tabValue === 'bulleted-list' ? 'numbered-list' : 'bulleted-list';
-       change
-        .unwrapBlock(
-          this.state.tabValue === 'bulleted-list' ? 'numbered-list' : 'bulleted-list'
-        )
-        .wrapBlock(type)
-        this.setState( { tabValue:type } )
-    }
+   
+   if( event.shiftKey && event.key === 'Tab' ) {
+
+    let re = /^\t/gm;
+    // let count = -selected.match(re).length;
+    // this.value = val.substring(0, start) + selected.replace(re, '') + val.substring(end);
+
+    // console.log(" >>> onKeyDown this.state.tabNumber : ",  this.state.tabNumber, " event.key :: " , event.key, " >>>>   value.startBlock.type :: ",  value);
+      // this.state.selectUL = !this.state.selectUL;
+      // const isList = this.hasBlock('list-item');
+      // this.state.tabNumber = ( this.state.tabNumber - 1 ) % numberOflist;
+      // console.log("shift Tab isList ::: >  ", isList);
+      // console.log( tabObj[ this.state.selectUL.toString()  ][this.state.tabNumber]  );
+      // this.state.tabNumber =( this.state.tabNumber - 1 ) % numberOflist;
+      // if( this.state.tabNumber < 0 ) {
+      //   this.state.selectUL = !this.state.selectUL;
+      //   this.state.tabNumber = 0;
+      // }
+      
+      const isType = value.blocks.some(block => {
+        console.log("block : ", block );
+      //  return !!document.getClosest(block.key, parent => parent.type === type)
+      });
+      // console.log("isType :: ", isType);
+     
+      // console.log("");
+      // if( isList && this.state.tabNumber ) {
+      //   change
+      //     .setBlocks('list-item')
+      //     .wrapBlock( tabObj[ this.state.selectUL.toString()  ][this.state.tabNumber]  )
+      // }
+    } 
+    // else if( event.shiftKey && event.key !== 'Tab' ) {
+      
+    // }
+    else if( event.key === 'Tab' ) {
+      if(  this.state.tabNumber < 3 ) {
+        this.state.tabNumber = ( this.state.tabNumber + 1 );
+
+        const isList = this.hasBlock('list-item');
+        if( isList ) {
+          change
+            .setBlocks('list-item')
+            .wrapBlock( tabObj[ this.state.selectUL.toString()  ][this.state.tabNumber]  )
+        }
+      }
+      
+    } 
+
 
     return next();
   }
 
   onClickBlock = (event, type) => {
     event.preventDefault()
+    const x = JSON.stringify(  this.state.selectUL );
    
     this.editor.change(change => {
       const { value } = change
@@ -283,24 +355,28 @@ class SlateComponent extends Component {
         }
       } else {
         // Handle the extra wrapping required for list buttons.
-        const isList = this.hasBlock('list-item')
+        const isList = this.hasBlock('list-item');
         const isType = value.blocks.some(block => {
           return !!document.getClosest(block.key, parent => parent.type === type)
-        })
-
+        });
+ 
         if (isList && isType) {
           change
             .setBlocks(DEFAULT_NODE)
             .unwrapBlock('bulleted-list')
             .unwrapBlock('numbered-list')
         } else if (isList) {
+          this.state.selectUL =  !this.state.selectUL;
+          this.state.tabNumber = this.state.tabNumber < 3 ? 1 :  this.state.tabNumber  ;
           change
             .unwrapBlock(
               type === 'bulleted-list' ? 'numbered-list' : 'bulleted-list'
             )
-            .wrapBlock(type)
+            .wrapBlock( tabObj[ this.state.selectUL.toString() ] [ this.state.tabNumber ] )
         } else {
           change.setBlocks('list-item').wrapBlock(type)
+          this.state.selectUL =  type === 'numbered-list' ? false : true;
+          this.state.tabNumber = this.state.tabNumber < 3 ? 1 :  this.state.tabNumber  ;
         }
       }
     })
