@@ -82,9 +82,6 @@ const existingValue = JSON.parse(localStorage.getItem('content'))
 
 let val = existingValue && typeof existingValue['document'] !== 'undefined' ? { document: existingValue['document'] } : initialValue;
 
-// .unwrapBlock('bulleted-list')
-// .unwrapBlock('numbered-list')
-
 class SlateComponent extends Component {
 
   state = {
@@ -257,16 +254,6 @@ class SlateComponent extends Component {
 
 
   renderBlockButton = (type, icon) => {
-
-    // // let isActive = this.hasBlock(type)
-
-    // if (['numbered-list', 'bulleted-list'].includes(type)) {
-    //   const { value } = this.state
-    //   const parent = value.document.getParent(value.blocks.first().key)
-    //   // isActive = this.hasBlock('list-item') && parent && parent.type === type
-    // }
-    // this.state.selectUL = !this.state.selectUL;
-
      return (
       <span className="separator"
         onMouseDown={event => this.onClickBlock(event, type)}
@@ -312,9 +299,6 @@ class SlateComponent extends Component {
       //     .wrapBlock( tabObj[ this.state.selectUL.toString()  ][this.state.tabNumber]  )
       // }
     } 
-    // else if( event.shiftKey && event.key !== 'Tab' ) {
-      
-    // }
     else if( event.key === 'Tab' ) {
       if(  this.state.tabNumber < 3 ) {
         this.state.tabNumber = ( this.state.tabNumber + 1 );
