@@ -13,8 +13,8 @@ import Toolbar from "./toolbar";
 const DEFAULT_NODE = 'paragraph';
 
 const tabObj = {
-  'true': [ 'paragraph', 'disc-list', 'circle-list', 'square-list' ],
-  'false': [ 'paragraph', 'decimal-list', 'lower-latin-list', 'lower-roman-list' ]
+  'true': [  'disc-list', 'circle-list', 'square-list' ],
+  'false': [ 'decimal-list', 'lower-latin-list', 'lower-roman-list' ]
 };
 
 const plugins = [ 
@@ -24,19 +24,25 @@ const plugins = [
 
       block = Number.isNaN( block ) ? 0 : block;
       
-      let nodes = editor['value']['document']['nodes']['_tail']['array'].reduce( (total, current) => {
-        if( current['text'].trim() !== "" ) {
-          total ++;
-        }
-        return total;
-      }, 0 );
+			try {
+	      let nodes = editor['value']['document']['nodes']['_tail']['array'].reduce( (total, current) => {
+	        if( current['text'].trim() !== "" ) {
+	          total ++;
+	        }
+	        return total;
+	      }, 0 );
    
-      if( block !== 0 &&  nodes > block ) {
-        event.preventDefault();
-        next();
-      } else {
-        next();
-      }
+	      if( block !== 0 &&  nodes > block ) {
+	        event.preventDefault();
+	        next();
+	      } else {
+	        next();
+	      }	
+			}
+			catch(e) {
+				next();
+			}
+
     }
   }
  ];
@@ -264,38 +270,52 @@ class SlateComponent extends Component {
    
    if( event.shiftKey && event.key === 'Tab' ) {
       const { value } = this.state;
+      let selectUL = this.state.selectUL;
+      let tabNumber = this.state.tabNumber - 1;
 
       event.preventDefault();
       
-      const parentKey = value.blocks ?  value.blocks.forEach(function( block) {
+      value.blocks.forEach(function( block) {
         // console.log(block.key, "  <?  ===>  ", value.document.getParent(block.key).key );
         // console.log("value.document.getParent(block.key).key : ", value.document.getParent(block.key).key);
         // total =  value.document.getParent(block.key).key
         // return total;
-        console.log(block.key, " <> value.document.getParent(block.key) : ", value.document.getParent(block.key));
-        change.unwrapNodeByKey( value.document.getParent(block.key).key)
+        // console.log(block.key, " <> value.document.getParent(block.key) : ", value.document.getParent(block.key));
+				try {
+					change.unwrapNodeByKey( value.document.getParent(block.key).key)
+				}
+				catch(e) {}
+        
         // value.document.unwrapNodeByKey( value.document.getParent(block.key).key )
-      }, null) : null;
+      });
 
-      console.log(" parentKey :  ", parentKey);
+      this.setState({
+        selectUL,
+        tabNumber
+      });
+      // console.log(" parentKey :  ", parentKey);
       
     } 
     else if( event.key === 'Tab' ) {
+			console.log("~~~~~~~~~~~~~~  press tab  ~~~~~~~~~~~~~~~~~~~");
       let tabNumberX =  this.state.tabNumber;
-      if(  tabNumberX < 3 ) {
-        tabNumberX =  tabNumberX + 1 ;
+			let selectUL =  this.state.selectUL;
+			console.log("Tab  tabNumberX 1 :: ", tabNumberX);
+      
+      tabNumberX =  tabNumberX + 1 ;
+			if(  tabNumberX < 3 ) {
         this.setState({ tabNumber: tabNumberX })
 
         const isList = this.hasBlock('list-item');
         if( isList ) {
+					console.log( " tabNumberX 2: ", tabNumberX , "  <<>> selectUL :: ", selectUL );
           change
             .setBlocks('list-item')
-            .wrapBlock( tabObj[ this.state.selectUL.toString()  ][this.state.tabNumber]  )
+            .wrapBlock( tabObj[ selectUL.toString()  ][ tabNumberX ]  )
         }
       }
-      
+      console.log("~~~~~~~~~~~~~  end of press tab  ~~~~~~~~~~~~~~~~~~~~~");
     } 
-
 
     return next();
   }
@@ -320,38 +340,54 @@ class SlateComponent extends Component {
           change.setBlocks(isActive ? DEFAULT_NODE : type)
         }
       } else {
+				console.log("`````````````````````  start on click   `````````````````````````````");
         let selectUL = this.state.selectUL;
         let tabNumber = this.state.tabNumber;
+				console.log("selectUL 1 : [ ", selectUL, " ]  ## tabNumber 1 :  ", tabNumber);
 
         // Handle the extra wrapping required for list buttons.
         const isList = this.hasBlock('list-item');
         const isType = value.blocks.some(block => {
           return !!document.getClosest(block.key, parent => parent.type === type)
         });
+				console.log("isList : ", isList , "  isType : ", isType);
  
         if (isList && isType) {
+					console.log("?????????????????????????????????????");
+					console.log( " isList && isType :===> ", ( isList && isType ) );
           change
             .setBlocks(DEFAULT_NODE)
             .unwrapBlock('bulleted-list')
             .unwrapBlock('numbered-list')
+						.unwrapBlock( tabObj[ selectUL.toString()] [tabNumber]  )
         } else if (isList) {
+					console.log("...........................................");
+					console.log( " isList 2222 :: ", isList, " @@@  selectUL 1 : ", selectUL, "  @@@@ tabNumber 1 :  ", tabNumber );
           selectUL =  !selectUL;
-          tabNumber = tabNumber < 3 ? 1 : tabNumber;
+          // tabNumber = tabNumber < 3 ? 1 : tabNumber;
           change
             .unwrapBlock(
               type === 'bulleted-list' ? 'numbered-list' : 'bulleted-list'
             )
             .wrapBlock( tabObj[ selectUL.toString()] [tabNumber] )
         } else {
-          change.setBlocks('list-item').wrapBlock(type)
+					console.log(",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,");
+					console.log("new block ::  type : ", type);
+          
           selectUL =  type === 'numbered-list' ? false : true;
-          tabNumber = tabNumber < 3 ? 1 : tabNumber  ;
+          // tabNumber = tabNumber < 3 ? 0 : tabNumber  ;
+					// console.log(  )
+					change.setBlocks('list-item').wrapBlock( tabObj[ selectUL.toString()] [ tabNumber] )
         }
-
+				
+				console.log("selectUL x : [ ", selectUL, " ]  ## tabNumber x :  ", tabNumber);
         this.setState({
           selectUL,
           tabNumber
         });
+				
+				console.log("<<<<<<<<<<<<<<<<<<  end of onclick >>>>>>>>>>>>>>>>>>>>>>>>");
+				console.log("");
       }
     })
   }
