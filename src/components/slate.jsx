@@ -1,12 +1,10 @@
 import React, { Component } from 'react';
 import { Editor } from 'slate-react'
-import { Block, Value } from 'slate'
-import { isKeyHotkey } from 'is-hotkey'
-import Plain from 'slate-plain-serializer'
+import { Block, Value } from 'slate';
 
 
 import Icon from "react-icons-kit";
-import {image, camera, listNumbered, list, list2} from 'react-icons-kit/icomoon'
+import {image, camera, listNumbered, list } from 'react-icons-kit/icomoon'
 
 import initialValue from "../value.json";
 
@@ -19,9 +17,6 @@ const tabObj = {
   'false': [ 'paragraph', 'decimal-list', 'lower-latin-list', 'lower-roman-list' ]
 };
 
-const maxBlockData = 0;
-const numberOflist = 4;
-// let tabNumber = 0 ;
 const plugins = [ 
   {
     onKeyDown: (event, editor, next) => {
@@ -36,7 +31,7 @@ const plugins = [
         return total;
       }, 0 );
    
-      if( block != 0 &&  nodes > block ) {
+      if( block !== 0 &&  nodes > block ) {
         event.preventDefault();
         next();
       } else {
@@ -233,7 +228,7 @@ class SlateComponent extends Component {
 
       case 'image': {
         const src = node.data.get('src')
-        return <img src={src} selected={isFocused} {...attributes} />
+        return <img src={src} alt="" selected={isFocused} {...attributes} />
       }
       default:
         return next()
@@ -265,43 +260,31 @@ class SlateComponent extends Component {
 
   // Define a new handler which prints the key that was pressed.
   onKeyDown = (event, change, next) => {
-    const { value } = change
-
+    // const { value } = change
    
    if( event.shiftKey && event.key === 'Tab' ) {
+      const { value } = this.state;
 
-    let re = /^\t/gm;
-    // let count = -selected.match(re).length;
-    // this.value = val.substring(0, start) + selected.replace(re, '') + val.substring(end);
-
-    // console.log(" >>> onKeyDown this.state.tabNumber : ",  this.state.tabNumber, " event.key :: " , event.key, " >>>>   value.startBlock.type :: ",  value);
-      // this.state.selectUL = !this.state.selectUL;
-      // const isList = this.hasBlock('list-item');
-      // this.state.tabNumber = ( this.state.tabNumber - 1 ) % numberOflist;
-      // console.log("shift Tab isList ::: >  ", isList);
-      // console.log( tabObj[ this.state.selectUL.toString()  ][this.state.tabNumber]  );
-      // this.state.tabNumber =( this.state.tabNumber - 1 ) % numberOflist;
-      // if( this.state.tabNumber < 0 ) {
-      //   this.state.selectUL = !this.state.selectUL;
-      //   this.state.tabNumber = 0;
-      // }
+      event.preventDefault();
       
-      const isType = value.blocks.some(block => {
-        console.log("block : ", block );
-      //  return !!document.getClosest(block.key, parent => parent.type === type)
-      });
-      // console.log("isType :: ", isType);
-     
-      // console.log("");
-      // if( isList && this.state.tabNumber ) {
-      //   change
-      //     .setBlocks('list-item')
-      //     .wrapBlock( tabObj[ this.state.selectUL.toString()  ][this.state.tabNumber]  )
-      // }
+      const parentKey = value.blocks ?  value.blocks.forEach(function( block) {
+        // console.log(block.key, "  <?  ===>  ", value.document.getParent(block.key).key );
+        // console.log("value.document.getParent(block.key).key : ", value.document.getParent(block.key).key);
+        // total =  value.document.getParent(block.key).key
+        // return total;
+        console.log(block.key, " <> value.document.getParent(block.key) : ", value.document.getParent(block.key));
+        change.unwrapNodeByKey( value.document.getParent(block.key).key)
+        // value.document.unwrapNodeByKey( value.document.getParent(block.key).key )
+      }, null) : null;
+
+      console.log(" parentKey :  ", parentKey);
+      
     } 
     else if( event.key === 'Tab' ) {
-      if(  this.state.tabNumber < 3 ) {
-        this.state.tabNumber = ( this.state.tabNumber + 1 );
+      let tabNumberX =  this.state.tabNumber;
+      if(  tabNumberX < 3 ) {
+        tabNumberX =  tabNumberX + 1 ;
+        this.setState({ tabNumber: tabNumberX })
 
         const isList = this.hasBlock('list-item');
         if( isList ) {
@@ -318,8 +301,7 @@ class SlateComponent extends Component {
   }
 
   onClickBlock = (event, type) => {
-    event.preventDefault()
-    const x = JSON.stringify(  this.state.selectUL );
+    event.preventDefault();
    
     this.editor.change(change => {
       const { value } = change
@@ -338,6 +320,9 @@ class SlateComponent extends Component {
           change.setBlocks(isActive ? DEFAULT_NODE : type)
         }
       } else {
+        let selectUL = this.state.selectUL;
+        let tabNumber = this.state.tabNumber;
+
         // Handle the extra wrapping required for list buttons.
         const isList = this.hasBlock('list-item');
         const isType = value.blocks.some(block => {
@@ -350,18 +335,23 @@ class SlateComponent extends Component {
             .unwrapBlock('bulleted-list')
             .unwrapBlock('numbered-list')
         } else if (isList) {
-          this.state.selectUL =  !this.state.selectUL;
-          this.state.tabNumber = this.state.tabNumber < 3 ? 1 :  this.state.tabNumber  ;
+          selectUL =  !selectUL;
+          tabNumber = tabNumber < 3 ? 1 : tabNumber;
           change
             .unwrapBlock(
               type === 'bulleted-list' ? 'numbered-list' : 'bulleted-list'
             )
-            .wrapBlock( tabObj[ this.state.selectUL.toString() ] [ this.state.tabNumber ] )
+            .wrapBlock( tabObj[ selectUL.toString()] [tabNumber] )
         } else {
           change.setBlocks('list-item').wrapBlock(type)
-          this.state.selectUL =  type === 'numbered-list' ? false : true;
-          this.state.tabNumber = this.state.tabNumber < 3 ? 1 :  this.state.tabNumber  ;
+          selectUL =  type === 'numbered-list' ? false : true;
+          tabNumber = tabNumber < 3 ? 1 : tabNumber  ;
         }
+
+        this.setState({
+          selectUL,
+          tabNumber
+        });
       }
     })
   }
