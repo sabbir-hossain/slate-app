@@ -13,9 +13,11 @@ import Toolbar from "./toolbar";
 const DEFAULT_NODE = 'paragraph';
 
 const tabObj = {
-  'true': [  'disc-list', 'circle-list', 'square-list' ],
-  'false': [ 'decimal-list', 'lower-latin-list', 'lower-roman-list' ]
+  'true': [ DEFAULT_NODE, 'disc-list', 'circle-list', 'square-list' ],
+  'false': [ DEFAULT_NODE, 'decimal-list', 'lower-latin-list', 'lower-roman-list' ]
 };
+
+const maxBlockNum = tabObj['true'].length;
 
 const plugins = [ 
   {
@@ -88,7 +90,7 @@ class SlateComponent extends Component {
   state = {
     value:  Value.fromJSON(  val  ),
     tabValue: "bulleted-list",
-    tabNumber: 0,
+    tabNumber: 1,
     selectUL: true
   }
 
@@ -153,7 +155,7 @@ class SlateComponent extends Component {
             Cancel
           </button>
 
-          <input type="number" id="maxBlock" placeholder="max block"  /> 
+          <input type="number" id="maxBlock" placeholder="max block (Default 0)"  /> 
 
         </Toolbar>
 
@@ -253,7 +255,6 @@ class SlateComponent extends Component {
     return value.blocks.some(node => node.type === type)
   }
 
-
   renderBlockButton = (type, icon) => {
      return (
       <span className="separator"
@@ -272,49 +273,45 @@ class SlateComponent extends Component {
       const { value } = this.state;
       let selectUL = this.state.selectUL;
       let tabNumber = this.state.tabNumber - 1;
+    
+      if( tabNumber > 0 ) {
+        value.blocks.forEach(function( block ) {
+
+          try {
+            change
+              .unwrapNodeByKey( value.document.getParent(block.key).key )
+          }
+          catch(e) {
+          
+          }
+        });
+  
+        this.setState({
+          selectUL,
+          tabNumber
+        });
+      }
 
       event.preventDefault();
       
-      value.blocks.forEach(function( block) {
-        // console.log(block.key, "  <?  ===>  ", value.document.getParent(block.key).key );
-        // console.log("value.document.getParent(block.key).key : ", value.document.getParent(block.key).key);
-        // total =  value.document.getParent(block.key).key
-        // return total;
-        // console.log(block.key, " <> value.document.getParent(block.key) : ", value.document.getParent(block.key));
-				try {
-					change.unwrapNodeByKey( value.document.getParent(block.key).key)
-				}
-				catch(e) {}
-        
-        // value.document.unwrapNodeByKey( value.document.getParent(block.key).key )
-      });
-
-      this.setState({
-        selectUL,
-        tabNumber
-      });
-      // console.log(" parentKey :  ", parentKey);
-      
     } 
     else if( event.key === 'Tab' ) {
-			console.log("~~~~~~~~~~~~~~  press tab  ~~~~~~~~~~~~~~~~~~~");
+
       let tabNumberX =  this.state.tabNumber;
 			let selectUL =  this.state.selectUL;
-			console.log("Tab  tabNumberX 1 :: ", tabNumberX);
       
       tabNumberX =  tabNumberX + 1 ;
-			if(  tabNumberX < 3 ) {
+			if(  tabNumberX < maxBlockNum ) {
         this.setState({ tabNumber: tabNumberX })
 
         const isList = this.hasBlock('list-item');
         if( isList ) {
-					console.log( " tabNumberX 2: ", tabNumberX , "  <<>> selectUL :: ", selectUL );
-          change
+			    change
             .setBlocks('list-item')
             .wrapBlock( tabObj[ selectUL.toString()  ][ tabNumberX ]  )
         }
       }
-      console.log("~~~~~~~~~~~~~  end of press tab  ~~~~~~~~~~~~~~~~~~~~~");
+   
     } 
 
     return next();
@@ -326,6 +323,7 @@ class SlateComponent extends Component {
     this.editor.change(change => {
       const { value } = change
       const { document } = value;
+     
       // Handle everything but list buttons.
       if (type !== 'bulleted-list' && type !== 'numbered-list') {
         const isActive = this.hasBlock(type)
@@ -340,29 +338,27 @@ class SlateComponent extends Component {
           change.setBlocks(isActive ? DEFAULT_NODE : type)
         }
       } else {
-				console.log("`````````````````````  start on click   `````````````````````````````");
+       
         let selectUL = this.state.selectUL;
         let tabNumber = this.state.tabNumber;
-				console.log("selectUL 1 : [ ", selectUL, " ]  ## tabNumber 1 :  ", tabNumber);
-
+   
         // Handle the extra wrapping required for list buttons.
         const isList = this.hasBlock('list-item');
         const isType = value.blocks.some(block => {
-          return !!document.getClosest(block.key, parent => parent.type === type)
+          return !!document.getClosest(block.key, parent => {
+            return tabObj[ selectUL.toString() ].includes( parent.type )
+          })
         });
-				console.log("isList : ", isList , "  isType : ", isType);
- 
+			
         if (isList && isType) {
-					console.log("?????????????????????????????????????");
-					console.log( " isList && isType :===> ", ( isList && isType ) );
+				
           change
             .setBlocks(DEFAULT_NODE)
             .unwrapBlock('bulleted-list')
             .unwrapBlock('numbered-list')
 						.unwrapBlock( tabObj[ selectUL.toString()] [tabNumber]  )
         } else if (isList) {
-					console.log("...........................................");
-					console.log( " isList 2222 :: ", isList, " @@@  selectUL 1 : ", selectUL, "  @@@@ tabNumber 1 :  ", tabNumber );
+        
           selectUL =  !selectUL;
           // tabNumber = tabNumber < 3 ? 1 : tabNumber;
           change
@@ -371,23 +367,18 @@ class SlateComponent extends Component {
             )
             .wrapBlock( tabObj[ selectUL.toString()] [tabNumber] )
         } else {
-					console.log(",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,");
-					console.log("new block ::  type : ", type);
-          
+			 
           selectUL =  type === 'numbered-list' ? false : true;
           // tabNumber = tabNumber < 3 ? 0 : tabNumber  ;
 					// console.log(  )
 					change.setBlocks('list-item').wrapBlock( tabObj[ selectUL.toString()] [ tabNumber] )
         }
-				
-				console.log("selectUL x : [ ", selectUL, " ]  ## tabNumber x :  ", tabNumber);
+			
         this.setState({
           selectUL,
           tabNumber
         });
 				
-				console.log("<<<<<<<<<<<<<<<<<<  end of onclick >>>>>>>>>>>>>>>>>>>>>>>>");
-				console.log("");
       }
     })
   }
